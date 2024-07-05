@@ -2,7 +2,7 @@
 
 namespace Fearless\SmartPaymentRouting\providers;
 
-use Fearless\SmartPaymentRouting\Hello;
+use Fearless\SmartPaymentRouting\core\PaymentRoutingService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -27,7 +27,7 @@ class SmartPaymentRoutingServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind('smart-payment-routing', function () {
-            return new Hello;
+            return new PaymentRoutingService;
         });
 
         //load configuration file
