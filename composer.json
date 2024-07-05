@@ -1,11 +1,21 @@
 {
     "name": "fearless/smart-payment-routing",
+    "version": "1.0.0",
     "description": "This is a smart payment routing package for laravel, it checks for the most optimal payment processor to perform transactions",
     "license": "MIT",
     "autoload": {
         "psr-4": {
             "Fearless\\SmartPaymentRouting\\": "src/"
+        },
+        "files": ["src/helpers.php"]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Fearless\\SmartPaymentRouting\\Tests\\": "tests/"
         }
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.1"
     },
     "authors": [
         {
@@ -13,6 +23,17 @@
             "email": "adurotimijoshua@gmai.com"
         }
     ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Fearless\\SmartPaymentRouting\\Providers\\SmartPaymentRoutingServiceProvider",
+                "Fearless\\SmartPaymentRouting\\Providers\\RouteServiceProvider"
+            ],
+            "aliases": {
+                "SmartPaymentRouting": "Fearless\\SmartPaymentRouting\\Facades\\SmartPaymentRouting"
+            }
+        }
+    },
     "minimum-stability": "dev",
     "require": {}
 }
