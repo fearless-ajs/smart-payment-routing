@@ -35,5 +35,7 @@
         }
     },
     "minimum-stability": "dev",
-    "require": {}
+    "require": {
+        "musahmusah/laravel-multipayment-gateways": "dev-main"
+    }
 }
