@@ -1,6 +1,6 @@
 <?php
 
-use Fearless\SmartPaymentRouting\Http\Controllers\HelloController;
+use Fearless\SmartPaymentRouting\Http\Controllers\BanksController;
 use Illuminate\Support\Facades\Route;
 
-Route::get(config('smart-payment-routing.route'), [HelloController::class, 'home']);
+Route::get(config('smart-payment-routing.routes.banks'), [BanksController::class, 'getBanks']);
