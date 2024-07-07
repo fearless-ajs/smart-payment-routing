@@ -1,5 +1,5 @@
 {
-    "name": "fearless/smart-payment-routing",
+    "name": "fearless-ajs/smart-payment-routing",
     "version": "1.0.0",
     "description": "This is a smart payment routing package for laravel, it checks for the most optimal payment processor to perform transactions",
     "license": "MIT",
