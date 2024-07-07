@@ -1,31 +1,37 @@
 <?php
 namespace Fearless\SmartPaymentRouting\core;
 
+use Fearless\SmartPaymentRouting\core\adapter\ProcessorManager;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpKernel\Exception\NotAcceptableHttpException;
 
 class PaymentRoutingService
 {
-    protected mixed $processors;
+    protected ProcessorManager $processorManager;
 
-    public function __construct()
+    public function __construct(ProcessorManager $processorManager)
     {
-        $this->processors = Config::get('smart-payment-routing.processors');
+        $this->processorManager = $processorManager;
     }
 
-    public function route($transaction): array|null
+    public function route($transaction): mixed
     {
+        // check if the registered processors supports the supplied currency
+        if (!$this->checkTransactionCurrency($transaction['currency']))
+            throw new NotAcceptableHttpException('Invalid currency, please check the currency, and the config');
+
         try {
+            $processors = $this->processorManager->getAllProcessors();
             $routingRules = Config::get('smart-payment-routing.routing_rules');
             $prioritize = $routingRules['prioritize'];
             $thresholds = $routingRules['thresholds'];
 
             $selectedProcessor = null;
             //  loop through available processors in the config file
-            foreach ($this->processors as $name => $processor) {
+            foreach ($processors as $name => $processor) {
                 // check if the processor supports the transaction currency
-                if ($processor['currencies'] && array_key_exists($transaction->currency, $processor['currencies'])){
+                if ($processor['currencies'] && array_key_exists(strtoupper($transaction['currency']), $processor['currencies'])) {
                     if ($processor[$prioritize] <= $thresholds[$prioritize]) {
                         /*
                          * The $prioritize variable holds the criterion to prioritize (either 'cost' or 'reliability'),
@@ -44,21 +50,58 @@ class PaymentRoutingService
                     }
                     // else go for the default processor
                     if (is_null($selectedProcessor)) {
-                        $selectedProcessor = $this->processors[Config::get('smart-payment-routing.default')];
+                        $selectedProcessor = $this->getDefaultProcessor($transaction['currency']);
                     }
                 }
             }
 
-//            if (is_null($selectedProcessor)) {
-//                $selectedProcessor = $this->processors[Config::get('smart-payment-routing.default')];
-//            }
-
             return $selectedProcessor;
-//            $encryptedDetails = Crypt::encrypt($transaction['details']);
-            // Use encrypted details
         } catch (\Exception $e) {
-            Log::error('Payment routing failed', ['error' => $e->getMessage()]);
             // Handle the exception
+            Log::error('Payment routing failed', ['error' => $e->getMessage()]);
+            throw new NotAcceptableHttpException($e->getMessage());
         }
+    }
+
+    public function makeCharge(ProcessorManager $processorManager, array $transaction): mixed
+    {
+        // fetch available processors
+        $processors = $this->processorManager->getAllProcessors();
+        if (!$processors || count($processors) === 0)
+            throw new NotAcceptableHttpException('No processors found, please register a processor first');
+
+        $selectedProcessor = $this->route($transaction);
+        // Charge with the selected processor
+        $processorName = $selectedProcessor['name'];
+        $processor = $processorManager->getProcessor($processorName);
+        return $processor['name']->createPayment($transaction['user_email'], $transaction['amount'], $transaction['currency']);
+    }
+
+    public function checkTransactionCurrency(string $transactionCurrency): bool
+    {
+        $processors = $this->processorManager->getAllProcessors();
+        foreach ($processors as $name => $processor) {
+            foreach ($processor['currencies'] as $currencyName => $currency) {
+                if (strtoupper($currencyName) === strtoupper($transactionCurrency)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public function getDefaultProcessor(string $transactionCurrency)
+    {
+        $processors = $this->processorManager->getAllProcessors();
+
+        $default = $processors[Config::get('smart-payment-routing.default')];
+
+        // check if the default payment processor supports the currency
+        if (!array_key_exists(strtoupper($transactionCurrency), $default['currencies']))
+            throw new NotAcceptableHttpException('Invalid currency, default processor does not support the currency');
+
+        // Override the name and return the processor
+        $default['name'] = Config::get('smart-payment-routing.default');
+        return $default;
     }
 }
